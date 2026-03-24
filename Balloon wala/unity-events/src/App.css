@@ -1,8 +1,0 @@
-/* Tailwind CSS handles all styling. Custom globals if needed. */
-
-/* Dark mode scrollbar */
-@layer utilities {
-  html {
-    scrollbar-color: #4b5563 transparent;
-  }
-}
