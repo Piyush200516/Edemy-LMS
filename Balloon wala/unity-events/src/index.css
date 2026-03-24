@@ -1,0 +1,10 @@
+@import "tailwindcss&quot/base;
+@import "tailwindcss&quot/components;
+@import "tailwindcss&quot/utilities;
+
+/* Dark mode body styles */
+@layer base {
+  body {
+    @apply bg-gray-900 text-white;
+  }
+}

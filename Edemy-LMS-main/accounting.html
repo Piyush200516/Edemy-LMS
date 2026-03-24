@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Accounting Project - Dual DB Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .db-status { background: #f0f8ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+    .status { display: inline-block; padding: 5px 10px; border-radius: 3px; margin: 0 5px; }
+    .connected { background: #d4edda; color: #155724; }
+    .form-group { margin-bottom: 15px; }
+    input, button { padding: 8px; margin: 5px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f2f2f2; }
+    .error { color: red; }
+    .success { color: green; }
+    button { background: #007bff; color: white; border: none; cursor: pointer; }
+    button:hover { background: #0056b3; }
+  </style>
+</head>
+<body>
+  <h1>Accounting Project - Everything in One File</h1>
+  <div id="status" class="db-status">
+    <h3>Database Status:</h3>
+    <span id="postgres-status" class="status">Loading...</span>
+    <span id="mongo-status" class="status">Loading...</span>
+  </div>
+
+  <h2>Create Invoice (Postgres DB → auto log to Mongo DB)</h2>
+  <div class="form-group">
+    <input id="date" type="date" required>
+    <input id="amount" type="number" step="0.01" placeholder="Amount" required>
+    <input id="description" placeholder="Description" required>
+    <button onclick="createInvoice()">Create Invoice</button>
+  </div>
+
+  <h3>Invoices (Postgres DB)</h3>
+  <table id="invoices-table">
+    <thead><tr><th>ID</th><th>Date</th><th>Amount</th><th>Description</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h3>Logs (MongoDB)</h3>
+  <table id="logs-table">
+    <thead><tr><th>Timestamp</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    // "Postgres" DB - IndexedDB
+    const POSTGRES_DB = 'accounting_postgres';
+    const INVOICES_STORE = 'invoices';
+    let postgresDB;
+
+    // "MongoDB" DB - localStorage (JSON array)
+    const MONGO_LOGS_KEY = 'accounting_mongo_logs';
+
+    // Init IndexedDB (Postgres)
+    async function initPostgres() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(POSTGRES_DB, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          postgresDB = request.result;
+          document.getElementById('postgres-status').textContent = 'Postgres Connected';
+          document.getElementById('postgres-status').className = 'status connected';
+          loadInvoices();
+          resolve();
+        };
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          db.createObjectStore(INVOICES_STORE, { keyPath: 'id', autoIncrement: true });
+        };
+      });
+    }
+
+    // Create Invoice (Postgres) + Log (Mongo)
+    async function createInvoice() {
+      const date = document.getElementById('date').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const description = document.getElementById('description').value;
+
+      if (!date || !amount || !description) return alert('Fill all fields');
+
+      try {
+        // Postgres: Add invoice
+        const tx = postgresDB.transaction(INVOICES_STORE, 'readwrite');
+        const store = tx.objectStore(INVOICES_STORE);
+        const invoice = { date, amount, description };
+        const addRequest = store.add(invoice);
+        addRequest.onsuccess = async () => {
+          invoice.id = addRequest.result;
+
+          // Mongo: Log action
+          const logs = JSON.parse(localStorage.getItem(MONGO_LOGS_KEY) || '[]');
+          logs.unshift({ timestamp: new Date().toISOString(), action: 'invoice_created', details: `Invoice #${invoice.id}: $${amount}` });
+          localStorage.setItem(MONGO_LOGS_KEY, JSON.stringify(logs.slice(0, 100))); // Limit 100
+
+          loadInvoices();
+          loadLogs();
+          document.getElementById('amount').value = '';
+          document.getElementById('description').value = '';
+          alert('Invoice created & logged!');
+        };
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error: ' + error.message);
+      }
+    }
+
+    // Load Invoices (Postgres)
+    async function loadInvoices() {
+      const tx = postgresDB.transaction(INVOICES_STORE, 'readonly');
+      const store = tx.objectStore(INVOICES_STORE);
+      const request = store.getAll();
+      request.onsuccess = () => {
+        const tbody = document.querySelector('#invoices-table tbody');
+        tbody.innerHTML = '';
+        request.result.forEach(invoice => {
+          const row = tbody.insertRow();
+          row.innerHTML = `<td>${invoice.id}</td><td>${invoice.date}</td><td>$${invoice.amount}</td><td>${invoice.description}</td>`;
+        });
+      };
+    }
+
+    // Load Logs (Mongo)
+    function loadLogs() {
+      const logs = JSON.parse(localStorage.getItem(MONGO_LOGS_KEY) || '[]');
+      const tbody = document.querySelector('#logs-table tbody');
+      tbody.innerHTML = '';
+      logs.slice(0, 10).forEach(log => { // Show last 10
+        const row = tbody.insertRow();
+        row.innerHTML = `<td>${new Date(log.timestamp).toLocaleString()}</td><td>${log.action}</td><td>${log.details}</td>`;
+      });
+    }
+
+    // Clear DBs (Demo)
+    function clearDBs() {
+      indexedDB.deleteDatabase(POSTGRES_DB);
+      localStorage.removeItem(MONGO_LOGS_KEY);
+      location.reload();
+    }
+
+    // Init on load
+    window.onload = async () => {
+      await initPostgres();
+      
+      // Init Mongo status
+      if (localStorage.getItem(MONGO_LOGS_KEY)) {
+        document.getElementById('mongo-status').textContent = 'Mongo Connected';
+        document.getElementById('mongo-status').className = 'status connected';
+      } else {
+        localStorage.setItem(MONGO_LOGS_KEY, '[]');
+        document.getElementById('mongo-status').textContent = 'Mongo Ready';
+        document.getElementById('mongo-status').className = 'status connected';
+      }
+      loadLogs();
+
+      document.getElementById('date').valueAsDate = new Date();
+    };
+  </script>
+  <button onclick="clearDBs()" style="background: #dc3545; margin-top: 20px;">Clear All Data (Demo Reset)</button>
+</body>
+</html>

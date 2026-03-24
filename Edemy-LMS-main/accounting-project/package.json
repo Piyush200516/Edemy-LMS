@@ -1,0 +1,22 @@
+{
+  "name": "accounting-project",
+  "version": "1.0.0",
+  "description": "Accounting system with dual databases: MongoDB + PostgreSQL",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["accounting", "node", "express", "mongodb", "postgres"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.5.1",
+    "pg": "^8.13.0",
+    "sequelize": "^6.37.4",
+    "nodemon": "^3.1.4"
+  }
+}
