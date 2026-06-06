@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5014:5014"
+    environment:
+      - PORT=5014
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/lms
+      - JWT_SECRET=production_jwt_secret_key_123_lms
+      - JWT_EXPIRY=7d
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

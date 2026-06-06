@@ -1,0 +1,131 @@
+/* prisma/schema.prisma */
+
+generator client {
+  provider = "prisma-client-js"
+  // output = "../node_modules/@prisma/client"
+}
+
+ datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+ }
+
+ // ===========================
+ // Enums
+ // ===========================
+ enum Role {
+   USER
+   ADMIN
+ }
+
+ enum SubscriptionStatus {
+   ACTIVE
+   INACTIVE
+   CANCELED
+ }
+
+ // ===========================
+ // Models
+ // ===========================
+ model User {
+   id               String   @id @default(uuid())
+   fullName         String
+   email            String   @unique
+   password         String
+   avatarUrl        String?  // Cloudinary URL
+   role             Role     @default(USER)
+   subscriptionId   String?  // FK to Subscription
+   subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
+   createdAt        DateTime @default(now())
+   updatedAt        DateTime @updatedAt
+   deletedAt        DateTime?
+   // Relations
+   courses          Course[] @relation("UserCourses")
+   enrollments      Enrollment[]
+   payments         Payment[]
+ }
+
+ model Course {
+   id               String   @id @default(uuid())
+   title            String
+   description      String?
+   thumbnailUrl     String?
+   createdById      String
+   createdBy        User     @relation("UserCourses", fields: [createdById], references: [id])
+   lectures         Lecture[]
+   enrollments      Enrollment[]
+   createdAt        DateTime @default(now())
+   updatedAt        DateTime @updatedAt
+   deletedAt        DateTime?
+ }
+
+ model Lecture {
+   id               String   @id @default(uuid())
+   title            String
+   videoUrl         String?
+   courseId         String
+   course           Course   @relation(fields: [courseId], references: [id])
+   createdAt        DateTime @default(now())
+   updatedAt        DateTime @updatedAt
+   deletedAt        DateTime?
+ }
+
+ model Enrollment {
+   id               String   @id @default(uuid())
+   userId           String
+   courseId         String
+   enrolledAt       DateTime @default(now())
+   user             User     @relation(fields: [userId], references: [id])
+   course           Course   @relation(fields: [courseId], references: [id])
+   deletedAt        DateTime?
+ }
+
+ model Subscription {
+   id               String   @id @default(uuid())
+   userId           String   @unique
+   planId           String
+   status           SubscriptionStatus @default(INACTIVE)
+   startDate        DateTime?
+   endDate          DateTime?
+   user             User     @relation(fields: [userId], references: [id])
+   createdAt        DateTime @default(now())
+   updatedAt        DateTime @updatedAt
+   deletedAt        DateTime?
+ }
+
+ model Payment {
+   id               String   @id @default(uuid())
+   userId           String
+   amount           Decimal   @db.Decimal(10,2)
+   status           String
+   razorpayOrderId  String?
+   createdAt        DateTime @default(now())
+   user             User     @relation(fields: [userId], references: [id])
+   deletedAt        DateTime?
+ }
+
+ model ContactMessage {
+   id               String   @id @default(uuid())
+   name             String
+   email            String
+   message          String
+   createdAt        DateTime @default(now())
+   deletedAt        DateTime?
+ }
+
+ // Optional AuditLog model for tracking changes
+ model AuditLog {
+   id               String   @id @default(uuid())
+   model            String   // e.g., "User", "Course"
+   modelId          String   // primary key of the affected record
+   action           String   // CREATE, UPDATE, DELETE
+   performedById    String?
+   performedAt      DateTime @default(now())
+   data             Json?
+   performedBy      User?    @relation("AuditLogs", fields: [performedById], references: [id])
+ }
+
+// Add indexes for frequently queried fields
+@@index([email], name: "idx_user_email")
+@@index([title], name: "idx_course_title")
+@@index([createdAt], name: "idx_created_at")
