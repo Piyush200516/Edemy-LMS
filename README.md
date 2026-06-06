@@ -335,12 +335,11 @@ jobs:
 
 ## 🤝 Contributors
 
+All core development, architecture, implementation, and real‑time infrastructure were designed, built, and managed by **Piyush Mishra**.
+
 | Name | Role |
 |------|------|
-| **Piyush Mishra** | Project Lead, Architecture, Backend & DevOps |
-| **[Your Name]** | Frontend UI/UX, React & Tailwind |
-| **[Contributor]** | AI integration, OpenAI SDK |
-| **[Contributor]** | CI/CD & Helm chart |
+| **Piyush Mishra** | Full Stack Developer, System Architect, Backend, Frontend, DevOps, Real‑Time Infrastructure, PostgreSQL, Redis, Socket.IO, WebRTC, Kubernetes, AI Integration |
 
 Feel free to open **issues** and submit **pull requests** – all contributions are welcome!
 
